@@ -1,0 +1,64 @@
+
+(cell, int) add_subdomain(cell dic, slice subdomain, cell recs) {
+  slice srec = begin_cell()
+    .store_dict(recs)
+    .end_cell().begin_parse();
+  int f = dic~pfxdict_add(1016, subdomain, srec);
+  return (dic, f);
+}
+
+() recv_internal(slice in_msg) impure {
+  ;; nop
+}
+
+() recv_external(slice in_msg) impure {
+  slice signature = in_msg~load_bits(512);
+
+  slice cs = in_msg;
+  int msg_seqno = cs~load_uint(32);
+  int op = cs~load_uint(32);
+
+  slice data = get_data().begin_parse();
+  cell dic = data~load_dict();
+  int stored_seqno = data~load_uint(32);
+  int owner = data~load_uint(256);
+  data.end_parse();
+
+  throw_unless(33, msg_seqno == stored_seqno);
+  throw_unless(34, check_signature(slice_hash(in_msg), signature, owner));
+
+  accept_message();
+
+  if (op == 1) {
+    ;; add dns rec
+    int len = cs~load_uint(16);
+    slice subdomain = cs~load_bits(len);
+    cell recs = cs~load_dict();
+    cs.end_parse();
+
+    (dic, int f) = add_subdomain(dic, subdomain, recs);
+    throw_unless(41, f);
+  } elseif (op == 2) {
+    ;; change owner
+    owner = cs~load_uint(256);
+    cs.end_parse();
+  } else {
+    throw_unless(40, op == 9);  ;; 9 - op for init
+  }
+
+  set_data(begin_cell()
+    .store_dict(dic)
+    .store_uint(stored_seqno + 1, 32)
+    .store_uint(owner, 256)
+    .end_cell());
+}
+
+(int, cell) dnsresolve(slice subdomain, int category) method_id {
+  cell dic = get_data().begin_parse().preload_dict();
+  slice subdomain_ = ensure_zero_terminated(subdomain);
+  return do_dnsresolve(subdomain_, category, dic);
+}
+
+int seqno() method_id {
+  return get_data().begin_parse().skip_dict().preload_uint(32);
+}

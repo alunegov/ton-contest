@@ -1,0 +1,98 @@
+"TonUtil.fif" include
+"Asm.fif" include
+
+"code.fif" include <s constant code
+
+<b false 1 i, // dic
+  0 32 u, // seqno
+  "test-adns.pk" load-generate-keypair constant mdns_pk B, // owner pubkey
+b> constant storage
+
+// "test-adns_2.pk" load-generate-keypair constant adns2_pk constant adns2_pub
+"adns.addr" load-address-verbose 2constant adns_addr
+
+0 tuple 0x076ef1ea , // magic
+0 , 0 , // actions msg_sents
+1570470873 , // unix_time
+1 , 1 , 0 , // block_lt, trans_lt, rand_seed
+0 tuple 9223372036854775807 , dictnew , , // remaining balance
+0 , dictnew , // contract_address, global_config
+1 tuple // wrap to another tuple
+constant c7
+
+variable dic
+
+."add 'ru'" cr
+dictnew dic !
+<b 1 256 u, b> <s 1 dic @ 16 idict!+
+// .s
+swap dic !
+<b 2 256 u, b> <s -1 dic @ 16 idict!+
+// .s
+swap dic !
+<b adns_addr nip 256 u, b> <s -2 dic @ 16 idict!+
+// .s
+swap dic !
+
+1 <b b{0000} s, adns_addr addr, b> <b 1 32 u, 3 8 * 16 u, "ru" 0 hold $, dic @ dict, b> <s
+recv_internal code storage c7 runvmctx
+constant updated_storage
+constant exit_code
+."Exit code " exit_code . cr
+."Updated storage: " cr updated_storage <s csr. cr
+exit_code abort"FAIL exit_code"
+
+// ."extend 'ru'" cr
+// 1 <b b{0000} s, adns_addr addr, b> <b 3 32 u, 3 8 * 16 u, "ru" 0 hold $, b> <s
+// recv_internal code updated_storage c7 runvmctx
+// constant updated_storage
+// constant exit_code
+// ."Exit code " exit_code . cr
+// ."Updated storage: " cr updated_storage <s csr. cr
+// exit_code abort"FAIL exit_code"
+
+."dnsresolve" cr
+<b "ru" $, b> <s 0
+123660 code updated_storage c7 runvmctx
+constant updated_storage2
+constant exit_code
+."Exit code " exit_code . cr
+."Updated storage: " cr updated_storage2 <s csr. cr
+exit_code abort"FAIL exit_code"
+."r1: " swap dup constant r1 . cr
+."r2: " <s dup constant r2 csr. cr
+exit_code abort"FAIL exit_code"
+r1 2 1+ 8 * = not abort"FAIL r1"
+
+."dnsresolve" cr
+<b "ru" 0 hold "test" 0 hold $+ $, b> <s 0
+123660 code updated_storage c7 runvmctx
+constant updated_storage2
+constant exit_code
+."Exit code " exit_code . cr
+."Updated storage: " cr updated_storage2 <s csr. cr
+exit_code abort"FAIL exit_code"
+."r1: " swap dup constant r1 . cr
+."r2: " <s dup constant r2 csr. cr
+exit_code abort"FAIL exit_code"
+r1 2 1+ 8 * = not abort"FAIL r1"
+
+."opts" cr
+122717 code updated_storage c7 runvmctx
+constant updated_storage2
+constant exit_code
+."Exit code " exit_code . cr
+."Updated storage: " cr updated_storage2 <s csr. cr
+exit_code abort"FAIL exit_code"
+
+."expire_at" cr
+<b "ru" $, b> <s
+96961 code updated_storage c7 runvmctx
+constant updated_storage2
+constant exit_code
+."Exit code " exit_code . cr
+."Updated storage: " cr updated_storage2 <s csr. cr
+exit_code abort"FAIL exit_code"
+."r1: " dup constant r1 . cr
+exit_code abort"FAIL exit_code"
+r1 1570570873 = not abort"FAIL r1"

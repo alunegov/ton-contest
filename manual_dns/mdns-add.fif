@@ -1,0 +1,46 @@
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <filename-base> <seqno> <subdomain> [<savefile>]" cr
+  ."Creates a request with subdomain with categorys specified in script to DNS resolver created by mdns-new.fif, with private "
+  ."key loaded from file <filename-base>.pk and address from <filename-base>.addr, and saves it into <savefile>.boc "
+  ."('mdns-add-query.boc' by default)" cr
+  ."In case of complex subdomain name it should be in reverse order each followed by a zero byte except the last one "
+  ."(test.telegram.org -> org\0telegram\0test)" cr 1 halt
+  // ."<recs-file> is a text file with lines `REC <category> <addr>`" cr 1 halt
+} : usage
+$# dup 3 < swap 4 > or ' usage if
+
+$1 =: file-base
+$2 parse-int =: seqno
+$3 =: subdomain
+// $4 =: rec-file
+def? $4 { @' $4 } { "mdns-add-query" } cond constant savefile 
+
+file-base +".addr" load-address-verbose 2constant mdns_addr
+file-base +".pk" load-keypair nip constant mdns_pk
+
+variable dic
+dictnew dic !
+
+// s i --
+{ dic @ 16 idict!+ not abort"cannot add rec to dictionary"
+  dic !
+} : rec
+{ bl word bl word rec } : REC
+
+// parse rec file
+// rec-file include
+
+// ."Adding " subdomain type cr
+<b 1 256 u, b> <s 1 rec
+<b 2 256 u, b> <s -1 rec
+
+<b seqno 32 u, 1 32 u, subdomain $len 1+ 8 * 16 u, subdomain 0 hold $, dic @ dict, b>
+dup ."signing message: " <s csr. cr
+dup hashu mdns_pk ed25519_sign_uint
+<b b{1000100} s, mdns_addr addr, 0 Gram, b{00} s, swap B, swap <s s, b>
+dup ."External message for add record is " <s csr. cr
+2 boc+>B dup Bx. cr
+savefile +".boc" tuck B>file
+."(Saved adding record query to file " type .")" cr

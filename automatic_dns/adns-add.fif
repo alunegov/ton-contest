@@ -1,0 +1,31 @@
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." [<savefile>]" cr
+  ."The result is saved into <savefile> (`adns-add-query.boc` by default) and output in hexadecimal form, to be sent later as the body of a message from the wallet to automatic DNS contract, along with a small value (say, one Gram) to cover forwarding and processing fees" cr 1 halt
+} : usage
+
+$# dup 0 < swap 1 > or ' usage if
+def? $1 { @' $1 } { "adns-add-query.boc" } cond constant output_fname
+
+"ru" constant subdomain
+
+variable dic
+dictnew dic !
+
+// s i --
+{ dic @ 16 idict!+ not abort"cannot add rec to dictionary"
+  dic !
+} : rec
+{ bl word bl word rec } : REC
+
+// parse rec file
+// rec-file include
+
+// ."Adding " subdomain type cr
+<b 1 256 u, b> <s 1 rec
+<b 2 256 u, b> <s -1 rec
+
+<b 1 32 u, subdomain $len 1+ 8 * 16 u, subdomain 0 hold $, dic @ dict, b>
+cr ."Message body is " dup <s csr. cr
+
+2 boc+>B output_fname tuck B>file ."Saved to file " type cr

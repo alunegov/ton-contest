@@ -1,0 +1,56 @@
+;; Helpers to DNS resolver
+
+;; PFXDICTSET (x k D n – D` −1 or D 0)
+(cell, (int)) ~pfxdict_set(cell dict, int key_len, slice index, slice value) asm(value index dict key_len) "PFXDICTSET" "NULLSWAPIFNOT";
+;; PFXDICTREPLACE (x k D n – D` −1 or D 0)
+(cell, (int)) ~pfxdict_replace(cell dict, int key_len, slice index, slice value) asm(value index dict key_len) "PFXDICTREPLACE" "NULLSWAPIFNOT";
+;; PFXDICTADD (x k D n – D` −1 or D 0)
+(cell, (int)) ~pfxdict_add(cell dict, int key_len, slice index, slice value) asm(value index dict key_len) "PFXDICTADD" "NULLSWAPIFNOT";
+;; PFXDICTDEL (k D n – D` −1 or D 0)
+(cell, (int)) ~pfxdict_del(cell dict, int key_len, slice index) asm(index dict key_len) "PFXDICTDEL" "NULLSWAPIFNOT";
+;; PFXDICTGETQ (s D n – s` x s`` −1 or s 0)
+(slice, slice, slice, int) pfxdict_getq?(cell dict, int key_len, slice prefix) asm(prefix dict key_len) "PFXDICTGETQ" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+;; PFXDICTGET (s D n – s` x s``)
+(slice, slice, slice) pfxdict_get?(cell dict, int key_len, slice prefix) asm(prefix dict key_len) "PFXDICTGET";
+
+slice ensure_zero_terminated(slice subdomain) {
+  int len = slice_bits(subdomain);
+  if (len < 8) {
+    return subdomain;
+  }
+  int last_ch = subdomain.skip_bits(len - 8).preload_uint(8);
+  if (last_ch == 0) {
+    return subdomain;
+  } else {
+    return begin_cell().store_slice(subdomain).store_uint(0, 8).end_cell().begin_parse();
+  }
+}
+
+(int, cell) do_dnsresolve(slice subdomain, int category, cell dic) {
+  var (s1, s2, s3, f) = dic.pfxdict_getq?(1016, subdomain);
+  if (f) {
+    cell recs = s2~load_dict();
+
+    if (s3.slice_empty?()) {
+      if (category == 0) {
+        return (s1.slice_bits(), begin_cell().store_dict(recs).end_cell());
+      } else {
+        var (rec, f) = recs.idict_get?(16, category);
+        if (f) {
+          return (s1.slice_bits(), begin_cell().store_slice(rec).end_cell());
+        } else {
+          return (s1.slice_bits(), begin_cell().end_cell());
+        }
+      }
+    } else {
+      var (rec, f) = recs.idict_get?(16, -1);
+      if (f) {
+        return (s1.slice_bits(), begin_cell().store_slice(rec).end_cell());
+      } else {
+        return (s1.slice_bits(), begin_cell().end_cell());
+      }
+    }
+  } else {
+    return (0, begin_cell().end_cell());
+  }
+}

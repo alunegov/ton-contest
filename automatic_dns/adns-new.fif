@@ -1,0 +1,35 @@
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <workchain-id> [<filename-base>]" cr
+  ."Creates a new automatic DNS resolver in specified workchain, with private key saved to or loaded from <filename-base>.pk" cr
+  ."('adns.pk' by default)" cr 1 halt
+} : usage
+$# 1- -2 and ' usage if
+
+$1 parse-workchain-id =: wc // set workchain id from command line argument
+def? $2 { @' $2 } { "adns" } cond constant file-base
+
+."Creating new automatic DNS resolver in workchain " wc . cr
+
+"code.fif" include // code
+<b false 1 i, // dic
+  0 32 u, // seqno
+  file-base +".pk" load-generate-keypair constant adns_pk B, // owner pubkey
+b> // data
+null // no libs
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hashu wc swap 2dup 2constant adns_addr
+."new adns address = " 2dup .addr cr
+2dup file-base +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+<b 0 32 u, -1 32 i, b>
+dup ."signing message: " <s csr. cr
+dup hashu adns_pk ed25519_sign_uint rot
+<b b{1000100} s, adns_addr addr, 0 Gram, b{10} s, swap <s s, b{0} s, swap B, swap <s s, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+file-base +"-query.boc" tuck B>file
+."(Saved adns creating query to file " type .")" cr

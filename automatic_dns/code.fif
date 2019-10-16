@@ -1,0 +1,387 @@
+// automatically generated from `/mnt/c/Work3/ton/crypto/smartcont/stdlib.fc` `../shared/dns.fc` `code.fc` 
+PROGRAM{
+  DECLPROC ensure_zero_terminated
+  DECLPROC do_dnsresolve
+  DECLPROC load_data
+  DECLPROC store_data
+  DECLPROC add_subdomain
+  DECLPROC update_subdomain
+  DECLPROC get_subdomain
+  DECLPROC is_owner?
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  123660 DECLMETHOD dnsresolve
+  122717 DECLMETHOD opts
+  96961 DECLMETHOD expire_at
+  85143 DECLMETHOD seqno
+  ensure_zero_terminated PROC:<{
+    //  subdomain
+    DUP	//  subdomain subdomain
+    SBITS	//  subdomain len
+    DUP	//  subdomain len len
+    8 LESSINT	//  subdomain len _4
+    IFJMP:<{	//  subdomain len
+      DROP	//  subdomain
+    }>	//  subdomain len
+    -8 ADDCONST	//  subdomain _7
+    s1 s(-1) PUXC	//  subdomain subdomain _7
+    SDSKIPFIRST	//  subdomain _8
+    8 PLDU	//  subdomain last_ch
+    0 EQINT	//  subdomain _12
+    IFJMP:<{	//  subdomain
+    }>	//  subdomain
+    0 PUSHINT	//  subdomain _13=0
+    NEWC	//  subdomain _13=0 _14
+    ROT	//  _13=0 _14 subdomain
+    STSLICER	//  _13=0 _15
+    8 STU	//  _17
+    ENDC	//  _18
+    CTOS	//  _19
+  }>
+  do_dnsresolve PROC:<{
+    //  subdomain category dic
+    s1 s2 XCHG
+    1016 PUSHINT	//  category subdomain dic _7=1016
+    PFXDICTGETQ
+    NULLSWAPIFNOT
+    NULLSWAPIFNOT	//  category s1 s2 s3 f
+    IFJMP:<{	//  category s1 s2 s3
+      SWAP	//  category s1 s3 s2
+      LDDICT	//  category s1 s3 _50 _49
+      DROP	//  category s1 s3 recs
+      SWAP	//  category s1 recs s3
+      SEMPTY	//  category s1 recs _12
+      IFJMP:<{	//  category s1 recs
+        s2 PUSH	//  category s1 recs category
+        0 EQINT	//  category s1 recs _14
+        IFJMP:<{	//  category s1 recs
+          s2 POP	//  recs s1
+          SBITS	//  recs _15
+          NEWC	//  recs _15 _16
+          s1 s2 XCHG	//  _15 recs _16
+          STDICT	//  _15 _17
+          ENDC	//  _15 _18
+        }>	//  category s1 recs
+        s1 s2 XCHG
+        16 PUSHINT	//  s1 category recs _21=16
+        DICTIGET
+        NULLSWAPIFNOT	//  s1 rec f
+        IFJMP:<{	//  s1 rec
+          SWAP	//  rec s1
+          SBITS	//  rec _23
+          NEWC	//  rec _23 _24
+          ROT	//  _23 _24 rec
+          STSLICER	//  _23 _25
+          ENDC	//  _23 _26
+        }>	//  s1 rec
+        DROP	//  s1
+        SBITS	//  _27
+        NEWC	//  _27 _28
+        ENDC	//  _27 _29
+      }>	//  category s1 recs
+      s2 POP	//  recs s1
+      -1 PUSHINT	//  recs s1 _32=-1
+      ROT
+      16 PUSHINT	//  s1 _32=-1 recs _33=16
+      DICTIGET
+      NULLSWAPIFNOT	//  s1 rec f
+      IFJMP:<{	//  s1 rec
+        SWAP	//  rec s1
+        SBITS	//  rec _35
+        NEWC	//  rec _35 _36
+        ROT	//  _35 _36 rec
+        STSLICER	//  _35 _37
+        ENDC	//  _35 _38
+      }>	//  s1 rec
+      DROP	//  s1
+      SBITS	//  _39
+      NEWC	//  _39 _40
+      ENDC	//  _39 _41
+    }>	//  category s1 s2 s3
+    4 BLKDROP	// 
+    0 PUSHINT	//  _42=0
+    NEWC	//  _42=0 _43
+    ENDC	//  _42=0 _44
+  }>
+  load_data PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  data
+    LDDICT	//  dic data
+    32 LDU	//  dic seqno data
+    256 LDU	//  dic seqno owner data
+    ENDS
+  }>
+  store_data PROC:<{
+    //  dic seqno owner
+    NEWC	//  dic seqno owner _3
+    s1 s3 XCHG	//  owner seqno dic _3
+    STDICT	//  owner seqno _4
+    32 STU	//  owner _6
+    256 STU	//  _8
+    ENDC	//  _9
+    c4 POP
+  }>
+  add_subdomain PROC:<{
+    //  dic subdomain recs expire_at
+    NEWC	//  dic subdomain recs expire_at _5
+    s1 s2 XCHG	//  dic subdomain expire_at recs _5
+    STDICT	//  dic subdomain expire_at _6
+    32 STU	//  dic subdomain _8
+    ENDC	//  dic subdomain _9
+    CTOS	//  dic subdomain srec
+    s0 s2 XCHG
+    1016 PUSHINT	//  srec subdomain dic _13=1016
+    PFXDICTADD
+    NULLSWAPIFNOT	//  dic f
+  }>
+  update_subdomain PROC:<{
+    //  dic subdomain recs expire_at
+    NEWC	//  dic subdomain recs expire_at _5
+    s1 s2 XCHG	//  dic subdomain expire_at recs _5
+    STDICT	//  dic subdomain expire_at _6
+    32 STU	//  dic subdomain _8
+    ENDC	//  dic subdomain _9
+    CTOS	//  dic subdomain srec
+    s0 s2 XCHG
+    1016 PUSHINT	//  srec subdomain dic _13=1016
+    PFXDICTSET
+    NULLSWAPIFNOT	//  dic f
+  }>
+  get_subdomain PROC:<{
+    //  dic subdomain strict
+    s0 s2 XCHG
+    1016 PUSHINT	//  strict subdomain dic _7=1016
+    PFXDICTGETQ
+    NULLSWAPIFNOT
+    NULLSWAPIFNOT	//  strict _29 _30 _31 _32
+    s3 POP	//  strict f s2 s3
+    s0 s2 XCHG	//  strict s3 s2 f
+    NOT	//  strict s3 s2 _9
+    IFJMP:<{	//  strict s3 s2
+      3 BLKDROP	// 
+      NEWC	//  _10
+      ENDC	//  _11
+      0 PUSHINT	//  _11 _12=0
+      FALSE	//  _11 _12=0 _13
+    }>	//  strict s3 s2
+    SWAP	//  strict s2 s3
+    SEMPTY	//  strict s2 _14
+    NOT	//  strict s2 _15
+    s1 s2 XCHG	//  s2 strict _15
+    AND	//  s2 _16
+    IFJMP:<{	//  s2
+      DROP	// 
+      NEWC	//  _17
+      ENDC	//  _18
+      0 PUSHINT	//  _18 _19=0
+      FALSE	//  _18 _19=0 _20
+    }>	//  s2
+    LDDICT	//  _23 s2
+    32 LDU	//  _23 _36 _35
+    DROP	//  recs expire_at
+    TRUE	//  recs expire_at _28
+  }>
+  is_owner? PROC:<{
+    //  recs owner
+    -2 PUSHINT	//  recs owner _4=-2
+    ROT
+    16 PUSHINT	//  owner _4=-2 recs _5=16
+    DICTIGET
+    NULLSWAPIFNOT	//  owner rec f
+    IF:<{	//  owner rec
+      256 PLDU	//  owner _9
+      SWAP	//  _9 owner
+      EQUAL	//  _7
+    }>ELSE<{	//  owner rec
+      2DROP	// 
+      FALSE	//  _7
+    }>
+  }>
+  recv_internal PROC:<{
+    //  msg_value in_msg_cell in_msg
+    SWAP	//  msg_value in_msg in_msg_cell
+    CTOS	//  msg_value in_msg cs
+    4 LDU	//  msg_value in_msg flags cs
+    LDMSGADDR	//  msg_value in_msg flags _147 _146
+    DROP	//  msg_value in_msg flags s_addr
+    SWAP
+    1 PUSHINT	//  msg_value in_msg s_addr flags _12=1
+    AND	//  msg_value in_msg s_addr _13
+    s2 PUSH	//  msg_value in_msg s_addr _13 in_msg
+    SEMPTY	//  msg_value in_msg s_addr _13 _14
+    OR	//  msg_value in_msg s_addr _15
+    IFJMP:<{	//  msg_value in_msg s_addr
+      3 BLKDROP	// 
+    }>	//  msg_value in_msg s_addr
+    SWAP	//  msg_value s_addr in_msg
+    32 LDU	//  msg_value s_addr op in_msg
+    OVER	//  msg_value s_addr op in_msg op
+    1 EQINT	//  msg_value s_addr op in_msg _21
+    IFJMP:<{	//  msg_value s_addr op in_msg
+      NIP
+      NIP	//  msg_value in_msg
+      SWAP	//  in_msg msg_value
+      1 LESSINT	//  in_msg _24
+      42 THROWIF
+      16 LDU	//  len in_msg
+      SWAP	//  in_msg len
+      LDSLICEX	//  subdomain in_msg
+      LDDICT	//  subdomain recs in_msg
+      ENDS
+      load_data CALLDICT	//  subdomain recs dic seqno owner
+      NOW	//  subdomain recs dic seqno owner _42
+      100000 PUSHINT	//  subdomain recs dic seqno owner _42 _43=100000
+      ADD	//  subdomain recs dic seqno owner _44
+      s5 s4 s0 XCHG3	//  seqno owner dic subdomain recs _44
+      add_subdomain CALLDICT	//  seqno owner dic f
+      41 THROWIFNOT
+      -ROT	//  dic seqno owner
+      store_data CALLDICT
+    }>	//  msg_value s_addr op in_msg
+    s3 POP	//  in_msg s_addr op
+    DUP	//  in_msg s_addr op op
+    2 EQINT	//  in_msg s_addr op _50
+    IFJMP:<{	//  in_msg s_addr op
+      DROP	//  in_msg s_addr
+      REWRITESTDADDR	//  in_msg _161 _162
+      NIP	//  in_msg src_addr
+      SWAP	//  src_addr in_msg
+      16 LDU	//  src_addr len in_msg
+      SWAP	//  src_addr in_msg len
+      LDSLICEX	//  src_addr subdomain in_msg
+      16 LDI	//  src_addr subdomain cat in_msg
+      256 LDU	//  src_addr subdomain cat _170 _169
+      NIP	//  src_addr subdomain cat in_msg
+      ENDS
+      DUP	//  src_addr subdomain cat cat
+      51 THROWIFNOT
+      DROP	//  src_addr subdomain
+      load_data CALLDICT	//  src_addr subdomain dic seqno owner
+      s2 s3 PUSH2
+      TRUE	//  src_addr subdomain dic seqno owner dic subdomain _79
+      get_subdomain CALLDICT	//  src_addr subdomain dic seqno owner recs expire_at f
+      52 THROWIFNOT
+      s1 s6 PUXC	//  expire_at subdomain dic seqno owner recs recs src_addr
+      is_owner? CALLDICT	//  expire_at subdomain dic seqno owner recs f
+      53 THROWIFNOT
+      s4 s0 s5 XCHG3	//  owner seqno dic subdomain recs expire_at
+      update_subdomain CALLDICT	//  owner seqno dic f
+      55 THROWIFNOT
+      s0 s2 XCHG	//  dic seqno owner
+      store_data CALLDICT
+    }>	//  in_msg s_addr op
+    DUP	//  in_msg s_addr op op
+    3 EQINT	//  in_msg s_addr op _98
+    IFJMP:<{	//  in_msg s_addr op
+      DROP	//  in_msg s_addr
+      REWRITESTDADDR	//  in_msg _179 _180
+      NIP	//  in_msg src_addr
+      SWAP	//  src_addr in_msg
+      16 LDU	//  src_addr len in_msg
+      SWAP	//  src_addr in_msg len
+      LDSLICEX	//  src_addr subdomain in_msg
+      ENDS
+      load_data CALLDICT	//  src_addr subdomain dic seqno owner
+      s2 s3 PUSH2
+      TRUE	//  src_addr subdomain dic seqno owner dic subdomain _117
+      get_subdomain CALLDICT	//  src_addr subdomain dic seqno owner recs expire_at f
+      61 THROWIFNOT
+      s1 s6 PUXC	//  expire_at subdomain dic seqno owner recs recs src_addr
+      is_owner? CALLDICT	//  expire_at subdomain dic seqno owner recs f
+      63 THROWIFNOT
+      NOW	//  expire_at subdomain dic seqno owner recs _126
+      s0 s6 XCHG2	//  recs subdomain dic seqno owner _126 expire_at
+      MAX	//  recs subdomain dic seqno owner _127
+      100000 PUSHINT	//  recs subdomain dic seqno owner _127 _128=100000
+      ADD	//  recs subdomain dic seqno owner new_expire_at
+      5 1 REVERSE	//  owner seqno dic subdomain recs new_expire_at
+      update_subdomain CALLDICT	//  owner seqno dic f
+      64 THROWIFNOT
+      s0 s2 XCHG	//  dic seqno owner
+      store_data CALLDICT
+    }>	//  in_msg s_addr op
+    NIP
+    NIP	//  op
+    DUP	//  op op
+    0 EQINT	//  op _137
+    SWAP
+    31 PUSHPOW2	//  _137 op _140
+    AND	//  _137 _141
+    OR	//  _142
+    37 THROWIFNOT
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    9 PUSHPOW2	//  in_msg _3=512
+    LDSLICEX	//  signature in_msg
+    DUP	//  signature in_msg cs
+    32 LDU	//  signature in_msg _8 cs
+    32 LDU	//  signature in_msg msg_seqno valid_until cs
+    NOW	//  signature in_msg msg_seqno valid_until cs _15
+    s1 s2 XCHG	//  signature in_msg msg_seqno cs valid_until _15
+    LEQ	//  signature in_msg msg_seqno cs _16
+    35 THROWIF
+    load_data CALLDICT	//  signature in_msg msg_seqno cs dic seqno owner
+    s4 s1 XCPU	//  signature in_msg owner cs dic seqno msg_seqno seqno
+    EQUAL	//  signature in_msg owner cs dic seqno _23
+    33 THROWIFNOT
+    s0 s4 XCHG	//  signature seqno owner cs dic in_msg
+    HASHSU	//  signature seqno owner cs dic _26
+    s0 s5 s3 XC2PU	//  dic seqno owner cs _26 signature owner
+    CHKSIGNU	//  dic seqno owner cs _27
+    34 THROWIFNOT
+    ACCEPT	//  dic seqno owner cs
+    WHILE:<{
+      DUP	//  dic seqno owner cs cs
+      SREFS	//  dic seqno owner cs _32
+    }>DO<{	//  dic seqno owner cs
+      8 LDU	//  dic seqno owner mode cs
+      LDREF	//  dic seqno owner mode _37 cs
+      s0 s2 XCHG	//  dic seqno owner cs _37 mode
+      SENDRAWMSG
+    }>	//  dic seqno owner cs
+    ENDS
+    store_data CALLDICT
+  }>
+  dnsresolve PROC:<{
+    //  subdomain category
+    c4 PUSH	//  subdomain category _3
+    CTOS	//  subdomain category _4
+    PLDDICT	//  subdomain category dic
+    s0 s2 XCHG	//  dic category subdomain
+    ensure_zero_terminated CALLDICT	//  dic category subdomain_
+    s0 s2 XCHG	//  subdomain_ category dic
+    do_dnsresolve CALLDICT	//  _9 _10
+  }>
+  opts PROC:<{
+    // 
+    1 PUSHINT	//  _0=1
+    100000 PUSHINT	//  _0=1 _1=100000
+    0 PUSHINT	//  _0=1 _1=100000 _2=0
+  }>
+  expire_at PROC:<{
+    //  subdomain
+    c4 PUSH	//  subdomain _2
+    CTOS	//  subdomain _3
+    PLDDICT	//  subdomain dic
+    SWAP	//  dic subdomain
+    ensure_zero_terminated CALLDICT	//  dic subdomain_
+    TRUE	//  dic subdomain_ _10
+    get_subdomain CALLDICT	//  _14 _15 _16
+    s2 POP	//  f expire_at
+    SWAP	//  expire_at f
+    IF:<{	//  _12
+    }>ELSE<{	//  expire_at
+      DROP	// 
+      0 PUSHINT	//  _12=0
+    }>
+  }>
+  seqno PROC:<{
+    // 
+    c4 PUSH	//  _0
+    CTOS	//  _1
+    SKIPDICT	//  _2
+    32 PLDU	//  _4
+  }>
+}END>c

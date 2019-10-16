@@ -1,0 +1,26 @@
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <filename-base> <seqno> <new-owner-pubkey> [<savefile>]" cr
+  ."Changes the owner of an DNS resolver created by mdns-new.fif, with private key loaded from file <filename-base>.pk and "
+  ."address from <filename-base>.addr, and saves it into <savefile>.boc ('mdns-owner-query.boc' by default)" cr 1 halt
+} : usage
+$# dup 3 < swap 4 > or ' usage if
+
+$1 =: file-base
+$2 parse-int =: seqno
+$3 parse-pubkey =: mdns_new_owner_addr
+def? $4 { @' $4 } { "mdns-owner-query" } cond constant savefile 
+
+file-base +".addr" load-address-verbose .s cr 2constant mdns_addr
+file-base +".pk" load-keypair nip constant mdns_pk
+
+<b seqno 32 u, 2 32 u, mdns_new_owner_addr 256 u, b>
+dup ."signing message: " <s csr. cr
+dup hashu mdns_pk ed25519_sign_uint
+<b swap B, swap <s s, b>
+<b b{1000100} s, mdns_addr addr, 0 Gram, b{01} s, swap ref, b>
+dup ."External message for change owner is " <s csr. cr
+2 boc+>B dup Bx. cr
+savefile +".boc" tuck B>file
+."(Saved changing owner query to file " type .")" cr

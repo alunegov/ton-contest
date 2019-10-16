@@ -1,0 +1,193 @@
+
+(cell, int, int) load_data() {
+  slice data = get_data().begin_parse();
+  cell dic = data~load_dict();
+  int seqno = data~load_uint(32);
+  int owner = data~load_uint(256);
+  data.end_parse();
+  return (dic, seqno, owner);
+}
+
+() store_data(cell dic, int seqno, int owner) impure {
+  set_data(begin_cell()
+    .store_dict(dic)
+    .store_uint(seqno, 32)
+    .store_uint(owner, 256)
+    .end_cell());
+}
+
+(cell, int) add_subdomain(cell dic, slice subdomain, cell recs, int expire_at) {
+  slice srec = begin_cell()
+    .store_dict(recs)
+    .store_uint(expire_at, 32)
+    .end_cell().begin_parse();
+  int f = dic~pfxdict_add(1016, subdomain, srec);
+  return (dic, f);
+}
+
+(cell, int) update_subdomain(cell dic, slice subdomain, cell recs, int expire_at) {
+  slice srec = begin_cell()
+    .store_dict(recs)
+    .store_uint(expire_at, 32)
+    .end_cell().begin_parse();
+  int f = dic~pfxdict_set(1016, subdomain, srec);
+  return (dic, f);
+}
+
+(cell, int, int) get_subdomain(cell dic, slice subdomain, int strict) {
+  var (_, s2, s3, f) = dic.pfxdict_getq?(1016, subdomain);
+  if (~ f) {
+    return (begin_cell().end_cell(), 0, false);
+  }
+  if (strict & (~ s3.slice_empty?())) {
+    return (begin_cell().end_cell(), 0, false);
+  }
+
+  var (recs, expire_at) = (s2~load_dict(), s2~load_uint(32));
+  return (recs, expire_at, true);
+}
+
+int is_owner?(cell recs, int owner) {
+  var (rec, f) = recs.idict_get?(16, -2);
+  return f ? (rec.preload_uint(256) == owner) : false;
+}
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+  var cs = in_msg_cell.begin_parse();
+  var flags = cs~load_uint(4);  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+  var s_addr = cs~load_msg_addr();
+
+  if ((flags & 1) | in_msg.slice_empty?()) {
+    ;; a bounced message, or a simple transfer
+    return ();
+  }
+
+  int op = in_msg~load_uint(32);
+
+  if (op == 1) {
+    ;; add record
+    throw_if(42, msg_value < 1); ;; send_back?
+
+    int len = in_msg~load_uint(16);
+    slice subdomain = in_msg~load_bits(len);
+    cell recs = in_msg~load_dict();
+    in_msg.end_parse();
+
+    ;; accept_message();
+
+    var (dic, seqno, owner) = load_data();
+
+    (dic, int f) = dic.add_subdomain(subdomain, recs, now() + 100000);
+    throw_unless(41, f); ;; send_back?
+
+    store_data(dic, seqno, owner);
+
+    return ();
+  }
+
+  if (op == 2) {
+    ;; update record.category
+    (_, int src_addr) = s_addr.parse_std_addr();
+
+    int len = in_msg~load_uint(16);
+    slice subdomain = in_msg~load_bits(len);
+    int cat = in_msg~load_int(16);
+    int new_rec = in_msg~load_uint(256);
+    in_msg.end_parse();
+
+    throw_unless(51, cat); ;; send_back?
+
+    var (dic, seqno, owner) = load_data();
+
+    (cell recs, int expire_at, int f) = dic.get_subdomain(subdomain, true);
+    throw_unless(52, f); ;; send_back?
+
+    int f = recs.is_owner?(src_addr);
+    throw_unless(53, f); ;; send_back?
+
+    ;; accept_message();
+
+    recs.idict_set_builder(16, cat, begin_cell().store_uint(256, new_rec));
+
+    (dic, int f) = dic.update_subdomain(subdomain, recs, expire_at);
+    throw_unless(55, f); ;; send_back?
+
+    store_data(dic, seqno, owner);
+
+    return ();
+  }
+
+  if (op == 3) {
+    ;; extend expiration
+    (_, int src_addr) = s_addr.parse_std_addr();
+
+    int len = in_msg~load_uint(16);
+    slice subdomain = in_msg~load_bits(len);
+    in_msg.end_parse();
+
+    var (dic, seqno, owner) = load_data();
+
+    (cell recs, int expire_at, int f) = dic.get_subdomain(subdomain, true);
+    throw_unless(61, f); ;; send_back?
+
+    int f = recs.is_owner?(src_addr);
+    throw_unless(63, f); ;; send_back?
+
+    ;; accept_message();
+
+    int new_expire_at = max(now(), expire_at) + 100000;
+
+    (dic, int f) = dic.update_subdomain(subdomain, recs, new_expire_at);
+    throw_unless(64, f); ;; send_back?
+
+    store_data(dic, seqno, owner);
+
+    return ();
+  }
+
+  ;; if op is non-zero and its higher bit is zero, throw an exception (the message is an unsupported query)
+  ;; to bounce message back to sender
+  throw_unless(37, (op == 0) | (op & (1 << 31)));
+  ;; do nothing for other internal messages
+}
+
+() recv_external(slice in_msg) impure {
+  var signature = in_msg~load_bits(512);
+  var cs = in_msg;
+  var (msg_seqno, valid_until) = (cs~load_uint(32), cs~load_uint(32));
+  throw_if(35, valid_until <= now());
+  var (dic, seqno, owner) = load_data();
+  throw_unless(33, msg_seqno == seqno);
+  throw_unless(34, check_signature(slice_hash(in_msg), signature, owner));
+  accept_message();
+  cs~touch();
+  while (cs.slice_refs()) {
+    var mode = cs~load_uint(8);
+    send_raw_message(cs~load_ref(), mode);
+  }
+  cs.end_parse();
+  store_data(dic, seqno, owner);
+}
+
+;; Get methods
+
+(int, cell) dnsresolve(slice subdomain, int category) method_id {
+  cell dic = get_data().begin_parse().preload_dict();
+  slice subdomain_ = ensure_zero_terminated(subdomain);
+  return do_dnsresolve(subdomain_, category, dic);
+}
+
+(int, int, int) opts() method_id {
+  return (1, 100000, 0);
+}
+
+(int) expire_at(slice subdomain) method_id {
+  cell dic = get_data().begin_parse().preload_dict();
+  slice subdomain_ = ensure_zero_terminated(subdomain);
+  (_, int expire_at, int f) = dic.get_subdomain(subdomain_, true);
+  return f ? expire_at : 0;
+}
+
+int seqno() method_id {
+  return get_data().begin_parse().skip_dict().preload_uint(32);
+}
